@@ -1,0 +1,45 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[brazilian]{babel}
+
+\author{Gabriel de Paula e Lima  587710\\
+        Giovana Vieira de Morais  587591}
+\title{Relatório Projeto 1}
+\begin{document}
+
+\maketitle
+
+O sistema total tem tamanho 4782492 KB, encontrado por meio do comando du
+/home. 
+
+A seguir, uma tabela que associa os valores às alterações feitas no arquivo
+.config ao fazermos com que os módulos deixassem de ser módulos dinamicamente
+carregados e, portanto, só usados quando necessário e passassem a ser estaticamente compilados, fazendo parte do núcleo
+e sendo carregados toda vez que o sistema é bootado.
+
+\begin{center}
+    \begin{tabular}{ | l | l | l | }
+        \hline
+         & Núcleo Estático & Módulos \\
+         \hline
+        Sistema Original & 7210384 bytes & 59584 KB \\
+        Sistema Alterado & 7519280 bytes & 164892 KB \\
+        \hline
+    \end{tabular}
+\end{center}  
+
+Ao fazer a instalação da nova parte estática, o núcleo compilado
+é copiado para a pasta /boot. Devido a mudança do status de carregamento dos
+módulos, que agora fazem parte do núcleo, há um aumento de tamanho.
+
+É importante salientar que esse aumento de tamanho também implica maior
+velocidade nos acessos às funcionalidades, uma vez que o acesso ao disco não ocorre com
+frequência.
+
+Num primeiro momento, estávamos mudando o status de carregamento dos módulos um
+a um, procurando todas as dependências necessárias para tal. Contudo, notamos
+que havia mais de três mil módulos, o que dificultaria o trabalho. Nesse caso,
+alteramos todo arquivo .config de uma vez. 
+
+\end{document}
+
