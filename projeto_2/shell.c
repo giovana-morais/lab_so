@@ -8,23 +8,18 @@
 #define MAX 256
 
 /* 
- * 1. descobrir como receber argumentos (fç de string)
+ * 1. descobrir como receber argumentos YESSSSSSSSSSSSSS
  *  1.1 - pegar a linha inteira 
  *  1.2 - dividir a linha em argumentos (strtok)
  *  1.3 - interpretar cada um deles (execvp)
- * 2. comandos em segundo plano
+ * 2. comandos em segundo plano YESSSSSSSSSSSSSS
  * 3. entrada e saída padrão 
  */
 
-/* DUVIDAS
-	1. o que fazer no caso do cd? (cd não roda)
-	2. comandos que rodam em segundo plano podem receber argumentos?
-	2.1 aparentemente, os comandos já estão sendo rodados em segundo plano. o firefox, por exemplo, funciona. a calculadora não funciona.
-	3. devemos permitir uma sequência de comandos? ex: firefox & ls -al 
-*/
 int main() {
-	char comando[MAX], *token, **args;
-	int pid, i;
+	char comando[MAX], *token, **args, *nome_arq_in, *nome_arq_out;
+	int pid, i, retorno = 0, flag = 0, flag_arq_in = 0, flag_arq_out;
+    FILE *arq_in, *arq_out;
 
 	args = malloc(MAX * sizeof(char *));
 	while (1) {
@@ -34,26 +29,36 @@ int main() {
 		strtok(comando, "\n");
 		token =  strtok(comando, " ");
 		i = 0;
+        flag = 0;
 		while(token != NULL){
-			args[i] = token;
-			token =  strtok(NULL, " ");
-			i++;
+            if(token == "<")
+                nome_arq_in = token;
+            else if(token == ">")
+                nome_arq_out = token;
+            else 
+                args[i] = token;
+            token =  strtok(NULL, " ");
+            i++;
+            
 		}
-		args[i++] = '\0';
-
-		for(i = 0; args[i] != NULL; i++)
-			printf("arg[i] %s\n", args[i]);
-
+		args[i] = '\0';
 
 		if (!strcmp(comando, "exit")) {
 			exit(EXIT_SUCCESS);
 		}
 
+        if(!strcmp(args[--i], "&")){
+            args[i] = '\0';
+            flag = 1;
+        }
+
 		pid = fork();
-		if (pid) {
+		if(flag && pid){
+            // execução em background
+            waitpid(pid, &retorno, WNOHANG);
+        } else if (pid) {
 			waitpid(pid, NULL, 0); 
 		} else {
-			//execlp(comando, comando, NULL);
 			if(execvp(comando, args) < 0) {
 				for(i = 0; args[i] != NULL; i++){
 					free(args[i]);
