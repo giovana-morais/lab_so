@@ -9,6 +9,11 @@
 
 int main() {
 	char comando[MAX], *token, **args, *nome_arq_in, *nome_arq_out;
+    /*
+     * flag_bg: 1 se há execução em background
+     * flag_in: 1 se há redirecionamento de entrada
+     * flag_out: 1 se há redirecionamento de saída
+     */
 	int pid, i, retorno = 0, flag_bg, flag_in, flag_out;
     FILE *arq_in, *arq_out;
 
@@ -19,56 +24,56 @@ int main() {
 		__fpurge(stdin);
 
 		fgets(comando, MAX, stdin);
-    comando[strlen(comando) - 1] = '\0'; // ignora o \n
-		token =  strtok(comando, " ");//obtem palavra até o espaço
+        comando[strlen(comando) - 1] = '\0'; // ignora o \n
+		token =  strtok(comando, " ");
 		i = 0, flag_bg = 0, flag_in = 0, flag_out = 0;
 
 		while(token != NULL){
             if(!strcmp(token, "<")){
                 // redireção de entrada
-                token = strtok(NULL, " ");//obtem o filename do arquivo
-                nome_arq_in = token;//salva o filename em um ponteiro de string
-                flag_in = 1;//flag utilizada para identificar se há redirecionamento de entrada
+                token = strtok(NULL, " ");
+                nome_arq_in = token;
+                flag_in = 1; 
             } else if(!strcmp(token, ">")) {
                 // redireção de saída
-                token = strtok(NULL, " ");//obtem o filename do arquivo
-                nome_arq_out = token;//salva o filename em um ponteiro de string
-                flag_out = 1;//flag utilizada para identificar se há redirecionamento de saida
+                token = strtok(NULL, " ");
+                nome_arq_out = token;
+                flag_out = 1; 
             } else {
-                args[i] = token;//armazena a palavra no vetor de argumentos
-                i++;//incrementa o indice do vetor de argumentos
+                args[i] = token;
+                i++;
             }
-            token =  strtok(NULL, " ");//obtem palavra até o espaço
+            token =  strtok(NULL, " ");
 		}
-		args[i] = '\0';//"fecha" o vetor de argumentos
+		args[i] = '\0';
 
-		if (!strcmp(comando, "exit")) {//sai da shell se for um comando de saida
+		if(!strcmp(comando, "exit")){
 			exit(EXIT_SUCCESS);
 		}
 
-        if(!strcmp(args[--i], "&")){//verificação de execução em background
-            args[i] = '\0';//retira o & do vetor de argumentos
-            flag_bg = 1;//flag de identificação de execução em background
+        if(!strcmp(args[--i], "&")){
+            args[i] = '\0'; //retira o & do vetor de argumentos
+            flag_bg = 1; 
         }
 
-		pid = fork();//cria um novo processo
-		if(flag_bg && pid){//em caso de execução em background
-      // execução em background
-      waitpid(pid, &retorno, WNOHANG);//comando de execução de processo sem precisar o proximo esperar ele terminar
-    } else if (pid) {
+		pid = fork();
+		if(flag_bg && pid){
+            // execução em background
+            waitpid(pid, &retorno, WNOHANG); // WNOHANG: não espera a finalização de um processo
+        } else if (pid) {
 			waitpid(pid, NULL, 0);
 		} else {
-    // redirecionamento de entrada apenas no processo filho
-	    if(flag_in)//identifica redirecionamento de entrada
-	        arq_in = freopen(nome_arq_in, "r", stdin);
+            // redirecionamento de entrada/saída apenas no processo filho
+            if(flag_in)
+                arq_in = freopen(nome_arq_in, "r", stdin);
 
-	    if(flag_out)//identifica redirecionamento de saida
-	        arq_out = freopen(nome_arq_out, "w", stdout);
+            if(flag_out)
+                arq_out = freopen(nome_arq_out, "w", stdout);
 
-			if(execvp(comando, args) < 0){//execução de comando com argumentos
+			if(execvp(comando, args) < 0){
 				printf("Erro ao executar comando!\n");
 				exit(EXIT_FAILURE);
-	    }
+            }
 		}
 	}
 }
