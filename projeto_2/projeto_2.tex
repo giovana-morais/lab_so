@@ -21,14 +21,22 @@ As funcionalidades solicitadas para serem implementadas foram:
 \item{Redirecionamento de entrada e saída padrão para arquivos}
 \end{itemize}
 
-Explicaremos como implementamos cada uma dessas funções
+A seguir explicaremos como implementamos cada uma dessas funções
 
 \section*{Permissão de recebimento de argumentos para os comandos executados}
  A função supracitada foi implementada da seguinte maneira:
 
- Separamos cada string de entrada a fim de armazenarmos indivudualmente cada palavra digitada
- assim criando um vetor de argumentos 
+ Separamos cada string de entrada a fim de armazenarmos individualmente o comando e cada argumento digitado
+ deste modo criando um vetor de argumentos.
+ Então criamos um novo processo utilizando a chamada de sistema \texttt{fork},
+ a qual cria esse novo processo idêntico ao processo pai (Processo que chamou o \texttt{fork}),
+ sendo o processo filho apenas diferente do pai em seu id (\texttt{pid}) que é igual a 0.
+ Após isso utilizamos a chamada de sistema \texttt{execvp},
+ a qual irá substituir o conteúdo do processo filho pelo comando que queremos executar.
+ Assim \texttt{execvp} recebe o comando digitado na linha de comando e o vetor de argumentos obtido por nós.
+ Para então executar o comando com seus argumentos.
 
+\section*{Suporte para execução de comandos em segundo plano}
 
 
 
