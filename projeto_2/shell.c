@@ -7,39 +7,38 @@
 
 #define MAX 256
 
-/* 
- * 1. descobrir como receber argumentos YESSSSSSSSSSSSSS
- *  1.1 - pegar a linha inteira 
- *  1.2 - dividir a linha em argumentos (strtok)
- *  1.3 - interpretar cada um deles (execvp)
- * 2. comandos em segundo plano YESSSSSSSSSSSSSS
- * 3. entrada e saída padrão 
- */
-
 int main() {
 	char comando[MAX], *token, **args, *nome_arq_in, *nome_arq_out;
-	int pid, i, retorno = 0, flag = 0, flag_arq_in = 0, flag_arq_out;
+	int pid, i, retorno = 0, flag_bg, flag_in, flag_out;
     FILE *arq_in, *arq_out;
 
 	args = malloc(MAX * sizeof(char *));
+
 	while (1) {
 		printf("> ");
 		__fpurge(stdin);
+
 		fgets(comando, MAX, stdin);
-		strtok(comando, "\n");
+        comando[strlen(comando) - 1] = '\0'; // ignora o \n 
 		token =  strtok(comando, " ");
-		i = 0;
-        flag = 0;
+		i = 0, flag_bg = 0, flag_in = 0, flag_out = 0;
+
 		while(token != NULL){
-            if(token == "<")
+            if(!strcmp(token, "<")){
+                // redireção de entrada
+                token = strtok(NULL, " "); 
                 nome_arq_in = token;
-            else if(token == ">")
+                flag_in = 1;
+            } else if(!strcmp(token, ">")) {
+                // redireção de saída
+                token = strtok(NULL, " "); 
                 nome_arq_out = token;
-            else 
+                flag_out = 1;
+            } else {
                 args[i] = token;
+                i++;
+            }
             token =  strtok(NULL, " ");
-            i++;
-            
 		}
 		args[i] = '\0';
 
@@ -49,24 +48,27 @@ int main() {
 
         if(!strcmp(args[--i], "&")){
             args[i] = '\0';
-            flag = 1;
+            flag_bg = 1;
         }
 
 		pid = fork();
-		if(flag && pid){
+		if(flag_bg && pid){
             // execução em background
             waitpid(pid, &retorno, WNOHANG);
         } else if (pid) {
 			waitpid(pid, NULL, 0); 
 		} else {
-			if(execvp(comando, args) < 0) {
-				for(i = 0; args[i] != NULL; i++){
-					free(args[i]);
-				}
-				free(args);
+            // redirecionamento de entrada apenas no processo filho
+            if(flag_in)
+                arq_in = freopen(nome_arq_in, "r", stdin); 
+            
+            if(flag_out)
+                arq_out = freopen(nome_arq_out, "w", stdout);
+
+			if(execvp(comando, args) < 0){
 				printf("Erro ao executar comando!\n");
 				exit(EXIT_FAILURE);
-			}
+            }
 		}
 	}
 }
