@@ -29,7 +29,7 @@ A seguir explicaremos como implementamos cada uma dessas funções
  Separamos cada string de entrada a fim de armazenarmos individualmente o comando e cada argumento digitado
  deste modo criando um vetor de argumentos.
  Então criamos um novo processo utilizando a chamada de sistema \texttt{fork},
- a qual cria esse novo processo idêntico ao processo pai (Processo que chamou o \texttt{fork}),
+ a qual cria esse novo processo idêntico ao processo-pai (Processo que chamou o \texttt{fork}),
  sendo o processo filho apenas diferente do pai em seu id (\texttt{pid}) que é igual a 0.
  Após isso utilizamos a chamada de sistema \texttt{execvp},
  a qual irá substituir o conteúdo do processo filho pelo comando que queremos executar.
@@ -37,12 +37,22 @@ A seguir explicaremos como implementamos cada uma dessas funções
  Para então executar o comando com seus argumentos.
 
 \section*{Suporte para execução de comandos em segundo plano}
+A função supracitada foi implementada da seguinte maneira:
 
+Ao recebermos todos os argumentos do comando os armazenamos em um vetor de argumentos como citado no comando descrito anteriormente a este, verificamos se o símbolo de execução em segundo plano(\&) se encontra nesse vetor.
+Se encontramos ele, o removemos e sinalizamos um flag de execução de segundo plano.
+Após criarmos o novo processo através da chamada de sistema \texttt{fork},
+verificamos se a flag de execução em segundo plano está sinalizada.
+Estando ela sinalizada, utilizamos a chamada de sistema \texttt{waitpid},
+chamada esta a qual por padrão normalmente suspende a execução do processo-pai,
+nesse caso a própria shell, até uma mudança de estado do processo-filho.
+Porém utilizamos a opção \texttt{WNOHANG} a fim do processo não esperar
+a mudança de estado do processo-filho, assim executando o comando requerido em segundo plano.
 
 
 % funções implementadas:
 %   shell com funções com mais de um argumento
-%       execv
+%       execvp
 %   comandos em segundo plano
 %       waitpid + argumento pra não esperar um processo terminar antes de
 %       iniciar o outro
