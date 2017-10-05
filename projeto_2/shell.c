@@ -19,7 +19,7 @@ int main() {
 		__fpurge(stdin);
 
 		fgets(comando, MAX, stdin);
-        comando[strlen(comando) - 1] = '\0'; // ignora o \n
+    comando[strlen(comando) - 1] = '\0'; // ignora o \n
 		token =  strtok(comando, " ");//obtem palavra até o espaço
 		i = 0, flag_bg = 0, flag_in = 0, flag_out = 0;
 
