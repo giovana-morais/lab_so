@@ -1,6 +1,7 @@
 \documentclass[12pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[brazilian]{babel}
+\usepackage{enumitem}
 
 \author{Gabriel de Paula e Lima  587710\\
         Giovana Vieira de Morais  587591}
@@ -13,13 +14,20 @@
 
 \section*{Relatório}
 
-As funcionalidades solicitadas para serem implementadas foram:
+A partir de um programa inicial que simula um shell, as funcionalidades solicitadas para serem implementadas foram:
 
-\begin{itemize}
-\item{Permissão de recebimento de argumentos para os comandos executados}
-\item{Suporte para execução de comandos em segundo plano}
-\item{Redirecionamento de entrada e saída padrão para arquivos}
-\end{itemize}
+\begin{description}[labelindent=1cm]
+    \item[Permissão de argumentos para os comandos
+        executados]{Alguns comandos, por exemplo \texttt{ls}, têm parâmetros
+        adicionais que podem ser opcionais ou não. Dessa forma, nosso algoritmo
+        deveria ser capaz de reconhecer esses parâmetros e enviar para a função
+        de execução do sistema}
+    \item[Suporte para execução de comandos em segundo plano]{Ao usar o
+        caracter \texttt{\&}, o usuário indica que um comando deve ser executado
+        em segundo plano. O algoritmo deveria ser capaz de diferenciar este
+        símbolo de um parâmetro normal de execução.}
+    \item[Redirecionamento de entrada e saída padrão para arquivos]
+\end{description}
 
 A seguir explicaremos como implementamos cada uma dessas funções
 
