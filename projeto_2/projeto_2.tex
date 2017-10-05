@@ -57,10 +57,23 @@ nesse caso a própria shell, até uma mudança de estado do processo-filho.
 Porém utilizamos a opção \texttt{WNOHANG} a fim do processo não esperar
 a mudança de estado do processo-filho, assim executando o comando requerido em segundo plano.
 
-\section{Redirecionamento de entrada e saída padrão para arquivos}
+\section*{Redirecionamento de entrada e saída padrão para arquivos}
 A função supracitada foi implementada da seguinte maneira:
 
-
+Para o redirecionamento de entrada, verificamos se há símbolo correspondente a redirecionamento de entrada (\texttt{<})
+na entrada da shell.
+Ao identificarmos o símbolo, armazenamos o nome do arquivo de entrada que vem logo após o \texttt{<}
+e sinalizamos a flag de redirecionamento de entrada.
+Todo o processo descrito até o momento é feito de modo igual para o redirecionamento de saída e seu símbolo(\texttt{>}).
+Então criamos o novo processo através da chamada de sistema \texttt{fork}
+e verificamos as flags de redirecionamentos.
+Se tiverem sido sinalizadas, usamos a função de entrada e saída
+\texttt{freopen}, redirecionando então os fluxos padrões para o arquivo o qual o nome já teve o armazenamento citado anteriormente.
+No caso de ser redirecionamento de entrada, redirecionamos o arquivo para a entrada padrão \texttt{stdin},
+no caso de redirecionamento de saída, redirecionamos a saída padrão \texttt{stdout} para o arquivo.
+A chamada do redirecionamento foi feita após a chamada \texttt{fork},
+pois se o fizéssemos antes dele, estariamos fazendo redirecionamento do processo-pai(shell),
+quando na verdade desejamos fazer redirecionamento do processo-filho(comando executado pela shell).
 
 
 % funções implementadas:
