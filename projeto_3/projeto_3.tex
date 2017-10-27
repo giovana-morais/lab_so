@@ -9,7 +9,6 @@
 \begin{document}
 
 \maketitle
-
 \newpage
 
 \section*{A atividade}
@@ -24,5 +23,16 @@
 
 \subsection*{Exibir o PID do processo lendo o arquivo (\texttt{cat}) e do
 processo pai}
+    Para essa função, foi necessário usar a task\_struct, que é uma struct que
+    descreve informações de processos ou tarefas do sistema, guardando
+    informações importantes como PID, nome do processo atual, credenciais do
+    grupo e do processo e processo pai.
+
+    Após a declaração de um ponteiro para a estrutura, só foi necessário
+    imprimir o nome (\texttt{task->comm}) e o pid (\texttt{task->pid}) do
+    processo atual. Para imprimir as informações do processo pai:
+    \texttt{task->parent->comm} e \texttt{task->parent->pid}.
 \subsection*{Dar ao processo pai permissões de root}
+    Assim como mencionado acima, a \texttt{task\_struct} contém em suas
+    informações as credenciais do usuário e do grupo. 
 \end{document}
