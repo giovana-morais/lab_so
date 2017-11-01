@@ -9,17 +9,17 @@
 static int hello_show(struct seq_file *m, void *v) {
   	struct task_struct *task;
   	struct cred *credential;
-  	
+
 	task = current;
 	seq_printf(m, "Processo atual: %s, PID[%d]\n", task->comm, task->pid);
 	seq_printf(m, "Processo pai: %s, PID[%d]\n", task->parent->comm, task->parent->pid);
 	seq_printf(m, "Credenciais: %u\n", task->cred->uid.val);
-	
+
 	// dá permissão de root para o bash, que é o processo pai
 	credential = (struct cred*) get_cred(task->parent->cred);
-	credential->uid.val = 0;
+	credential->euid = 0;
 	put_cred(credential);
-	seq_printf(m, "Processo com acesso root: %s\nCredenciais put: %u\n", task->parent->comm, task->parent->cred->uid.val);
+	seq_printf(m, "Processo com acesso root: %s\nCredenciais put: %u\n", task->parent->comm, task->parent->cred->euid);
 
   return 0;
 }
