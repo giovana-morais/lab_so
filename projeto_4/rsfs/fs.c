@@ -39,10 +39,21 @@ typedef struct {
 
 dir_entry dir[128];
 
-
 int fs_init() {
-  printf("Função não implementada: fs_init\n");
-  return 1;
+    //printf("Função não implementada: fs_init\n");
+    // checa se está formatado
+    // carrega dados do disco
+    char *buffer; 
+    int i;
+
+    buffer = (char *) fat;
+    bl_read(0, buffer);
+
+    // nada dá certo 
+    for(i = 0; i < 65536; i++)
+        printf("%c", buffer[i]);
+
+    return 1;
 }
 
 int fs_format() {
