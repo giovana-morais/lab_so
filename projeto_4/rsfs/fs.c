@@ -50,20 +50,20 @@ int fs_init() {
     // checa se está formatado
     // carrega dados do disco
     char *buffer; 
-    int i, setor = 0;
+    //int i, setor = 0;
 
     buffer = (char *) fat;
     bl_read(0, buffer);
 
     // nada dá certo 
-    printf("alo: %ld", sizeof(fat));
+    // printf("alo: %ld", sizeof(fat));
 
     return 1;
 }
 
 int fs_format() {
  	// printf("Função não implementada: fs_format\n");
- 	int i = 0;
+ 	int i = 0, j;
   
   	for (i = 0; i < 32; i++)
   		fat[i] = A_FAT;
@@ -75,17 +75,18 @@ int fs_format() {
   
 	for(i = 0; i < 128; i++){
 	  	dir[i].used = DIR_LIVRE;
-  		dir[i].first_block = ULTIMO;
+  		//dir[i].first_block = ULTIMO;
   		dir[i].size = 0;
   	}
   	
   	char *buffer_fat = (char *) fat;
 	for (i = 0; i < 256; i++)
-		bl_write(i,&buffer_fat[i*512]);
+		bl_write(i, &buffer_fat[i*512]);
 
 	char *buffer_dir = (char *) dir;
-	for (i = 0; i < sizeof(dir); i++)
-		bl_write(i,&buffer_dir[i*512]);
+	for (i = 0, j = 256; i < 128; i++)
+		bl_write(j + i, &buffer_dir[i*512]);
+	
 	
   
   return 0;
