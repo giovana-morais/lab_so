@@ -46,25 +46,48 @@ typedef struct {
 dir_entry dir[128];
 
 int fs_init() {
-    //printf("Função não implementada: fs_init\n");
-    // checa se está formatado
+ 	int i = 0, format = 0;
+ 	char *buffer_fat = (char *) fat;
+ 	char op;
+   
     // carrega dados do disco
-    char *buffer; 
-    //int i, setor = 0;
-
-    buffer = (char *) fat;
-    bl_read(0, buffer);
-
-    // nada dá certo 
-    // printf("alo: %ld", sizeof(fat));
-
-    return 1;
+    for (i = 0; i < 256; i++)
+		if(!bl_read(i, &buffer_fat[i*512]))
+			return 0;
+	
+	// VERIFICA SE O DISCO ESTÁ FORMATADO
+	for (i = 0; i < 32; i++){
+		if(fat[i] != A_FAT){
+			format = 1;
+			break;
+		}
+	}
+	
+	if(fat[32] != A_DIR)
+		format = 1;
+	
+	for (i = 33; i < 65536; i++){
+		if(fat[i] != LIVRE){
+			format = 1;
+			break;
+		}
+	}
+	
+	if(format){
+		printf("O disco nao esta formatado.\nDeseja formata-lo? [y]=yes [n]=no\n");
+		scanf("%c", &op);
+		if(op == 'y')
+			fs_format();
+	}	
+	return 1;
 }
 
 int fs_format() {
- 	// printf("Função não implementada: fs_format\n");
  	int i = 0, j;
+ 	char *buffer_fat = (char *) fat;
+ 	char *buffer_dir = (char *) dir;
   
+  	// 70-77 SETA AS POSIÇÕES DA FAT, DO DIRETORIO E DOS ESPAÇOS LIVRES EM MEMÓRIA
   	for (i = 0; i < 32; i++)
   		fat[i] = A_FAT;
   	
@@ -72,24 +95,24 @@ int fs_format() {
   
   	for (i = 33; i < 65536; i++)
   		fat[i] = LIVRE;
-  
+  		
+	// INICIALIZA A STRUCT DIRETORIO
 	for(i = 0; i < 128; i++){
 	  	dir[i].used = DIR_LIVRE;
   		//dir[i].first_block = ULTIMO;
   		dir[i].size = 0;
   	}
   	
-  	char *buffer_fat = (char *) fat;
+  	// ESCREVE NO ARQUIVO IMAGEM A FAT E O DIRETORIO
 	for (i = 0; i < 256; i++)
-		bl_write(i, &buffer_fat[i*512]);
+		if(!bl_write(i, &buffer_fat[i*512]))
+			return 0;
 
-	char *buffer_dir = (char *) dir;
 	for (i = 0, j = 256; i < 128; i++)
-		bl_write(j + i, &buffer_dir[i*512]);
+		if(!bl_write(j + i, &buffer_dir[i*512]))
+			return 0;
 	
-	
-  
-  return 0;
+	return 1;
 }
 
 int fs_free() {
