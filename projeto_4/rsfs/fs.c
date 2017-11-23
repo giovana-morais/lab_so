@@ -27,6 +27,12 @@
 #include "fs.h"
 
 #define CLUSTERSIZE 4096
+#define LIVRE 	1
+#define ULTIMO	2
+#define A_FAT	3
+#define A_DIR	4
+#define DIR_LIVRE 0
+#define DIR_USADO 1
 
 unsigned short fat[65536];
 
@@ -44,20 +50,44 @@ int fs_init() {
     // checa se está formatado
     // carrega dados do disco
     char *buffer; 
-    int i;
+    int i, setor = 0;
 
     buffer = (char *) fat;
     bl_read(0, buffer);
 
     // nada dá certo 
-    for(i = 0; i < 65536; i++)
-        printf("%c", buffer[i]);
+    printf("alo: %ld", sizeof(fat));
 
     return 1;
 }
 
 int fs_format() {
-  printf("Função não implementada: fs_format\n");
+ 	// printf("Função não implementada: fs_format\n");
+ 	int i = 0;
+  
+  	for (i = 0; i < 32; i++)
+  		fat[i] = A_FAT;
+  	
+  	fat[32] = A_DIR;
+  
+  	for (i = 33; i < 65536; i++)
+  		fat[i] = LIVRE;
+  
+	for(i = 0; i < 128; i++){
+	  	dir[i].used = DIR_LIVRE;
+  		dir[i].first_block = ULTIMO;
+  		dir[i].size = 0;
+  	}
+  	
+  	char *buffer_fat = (char *) fat;
+	for (i = 0; i < 256; i++)
+		bl_write(i,&buffer_fat[i*512]);
+
+	char *buffer_dir = (char *) dir;
+	for (i = 0; i < sizeof(dir); i++)
+		bl_write(i,&buffer_dir[i*512]);
+	
+  
   return 0;
 }
 
