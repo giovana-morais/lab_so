@@ -116,8 +116,26 @@ int fs_format() {
 }
 
 int fs_free() {
-  printf("Função não implementada: fs_free\n");
-  return 0;
+    //printf("Função não implementada: fs_free\n");
+    int cont, mem_livre;
+
+    // percorre vetor de diretórios e busca por livres
+    // for(i = 0; i < 128; i++){
+    //     if(dir[i].used != DIR_LIVRE)
+    //         cont++;
+    // }
+
+    // mem_livre = cont * 32;
+
+    for(int i = 0; i < 32; i++){
+        if(fat[i] == LIVRE)
+            cont++;
+    }
+
+    mem_livre = cont * CLUSTERSIZE;
+    //return 0;
+
+    return mem_livre;
 }
 
 int fs_list(char *buffer, int size) {
