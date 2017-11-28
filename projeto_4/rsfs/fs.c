@@ -115,32 +115,38 @@ int fs_format() {
 	return 1;
 }
 
+// terminar
 int fs_free() {
     //printf("Função não implementada: fs_free\n");
-    int cont, mem_livre;
+    int cont = 0, mem_livre;
 
-    // percorre vetor de diretórios e busca por livres
-    // for(i = 0; i < 128; i++){
-    //     if(dir[i].used != DIR_LIVRE)
-    //         cont++;
-    // }
-
-    // mem_livre = cont * 32;
-
-    for(int i = 0; i < 32; i++){
+    for(int i = 33; i < bl_size(); i++){
         if(fat[i] == LIVRE)
             cont++;
     }
 
-    mem_livre = cont * CLUSTERSIZE;
-    //return 0;
+    mem_livre = cont * 512;
 
     return mem_livre;
 }
 
 int fs_list(char *buffer, int size) {
-  printf("Função não implementada: fs_list\n");
-  return 0;
+    char buffer_int[100];
+    memset(buffer_int, '\0', 100);
+    strcpy(buffer, "\0");
+
+    //printf("Função não implementada: fs_list\n");
+    
+    for(int i = 0; i < 128; i++){
+        if(dir[i].used){
+            strncpy(buffer, dir[i].name, strlen(dir[i].name));
+            strcpy(buffer, "\t\t");
+            sprintf(buffer_int, "%d", dir[i].size);
+            strncpy(buffer, buffer_int, strlen(buffer_int-1));
+            strcpy(buffer, "\n");
+        }
+    }
+    return 0;
 }
 
 int fs_create(char* file_name) {
