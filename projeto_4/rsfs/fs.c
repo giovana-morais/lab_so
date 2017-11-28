@@ -33,6 +33,7 @@
 #define A_DIR	4
 #define DIR_LIVRE 0
 #define DIR_USADO 1
+#define TAM_FAT 65536
 
 unsigned short fat[65536];
 
@@ -46,15 +47,18 @@ typedef struct {
 dir_entry dir[128];
 
 int fs_init() {
- 	int i = 0, format = 0;
+ 	int i = 0, format = 0, j = 0;
  	char *buffer_fat = (char *) fat;
+ 	char *buffer_dir = (char *) dir;
  	char op;
    
     // carrega dados do disco
-    for (i = 0; i < 256; i++)
+    for (i = 0; i < 256; i++){
 		if(!bl_read(i, &buffer_fat[i*512]))
 			return 0;
+    }
 	
+
 	// VERIFICA SE O DISCO ESTÁ FORMATADO
 	for (i = 0; i < 32; i++){
 		if(fat[i] != A_FAT){
@@ -66,7 +70,7 @@ int fs_init() {
 	if(fat[32] != A_DIR)
 		format = 1;
 	
-	for (i = 33; i < 65536; i++){
+	for (i = 33; i < TAM_FAT; i++){
 		if(fat[i] != LIVRE){
 			format = 1;
 			break;
@@ -78,6 +82,12 @@ int fs_init() {
 		scanf("%c", &op);
 		if(op == 'y')
 			fs_format();
+        else {
+            for (i = 0, j = 256; i < 128; i++){
+                if(!bl_read(j + i, &buffer_dir[i*512]))
+                    return 0;
+            }
+        }
 	}	
 	return 1;
 }
@@ -115,7 +125,6 @@ int fs_format() {
 	return 1;
 }
 
-// terminar
 int fs_free() {
     //printf("Função não implementada: fs_free\n");
     int cont = 0, mem_livre;
@@ -135,23 +144,71 @@ int fs_list(char *buffer, int size) {
     memset(buffer_int, '\0', 100);
     strcpy(buffer, "\0");
 
-    //printf("Função não implementada: fs_list\n");
-    
+    // pensar nisso depois 
     for(int i = 0; i < 128; i++){
         if(dir[i].used){
-            strncpy(buffer, dir[i].name, strlen(dir[i].name));
-            strcpy(buffer, "\t\t");
+            strcat(buffer, dir[i].name);
+            strcat(buffer, "\t\t");
             sprintf(buffer_int, "%d", dir[i].size);
-            strncpy(buffer, buffer_int, strlen(buffer_int-1));
-            strcpy(buffer, "\n");
+            strcat(buffer, buffer_int);
+            strcat(buffer, "\n");
+            
+            // TODO: TIRAR ESSE PRINTF DEPOIS
+            //printf("%s\n", dir[i].name);
+            printf("%s", buffer);
         }
     }
     return 0;
 }
 
+// tratar o caso de strlen(file_name) > 25
 int fs_create(char* file_name) {
-  printf("Função não implementada: fs_create\n");
-  return 0;
+    int flag = 0, pos_dir, cont_ocupado = 0, pos_fat;    
+    char *buffer_fat = (char*) fat;
+    char *buffer_dir = (char*) dir;
+
+
+    // procura primeira posição livre no vetor de diretórios
+    for(int i = 0; i < 128; i++){
+        if(!strcmp(file_name, dir[i].name))
+            return 0;
+        if(dir[i].used == DIR_LIVRE && flag != 1){
+            pos_dir = i;
+            flag = 1;
+        } else if(dir[i].used == DIR_USADO)
+            cont_ocupado++;
+    }
+
+    if(cont_ocupado == 127){
+        printf("Não há espaço!\n");
+        return 0;
+    }
+
+    // procura o primeiro espaço livre na FAT
+    for(int i = 33; i < TAM_FAT; i++){
+        if(fat[i] == LIVRE){
+            pos_fat = i;
+            fat[i] = pos_dir; 
+            // escreve no disco
+            printf("buffer_fat = %s\n", &buffer_fat[pos_fat*512]);
+            printf("buffer_dir = %s\n", &buffer_dir[pos_dir*512]);
+            if(!bl_write(pos_fat*8, &buffer_fat[pos_fat*512]))
+                return 0;
+            break;
+        }
+    }
+
+    printf("pos_fat = %d, pos_dir = %d\n", pos_fat, pos_dir);
+    // adiciona as infos do diretório
+    strcpy(dir[pos_dir].name, file_name);
+    dir[pos_dir].size = 0;
+    dir[pos_dir].used = DIR_USADO;
+    dir[pos_dir].first_block = pos_fat;
+
+    if(!bl_write(pos_dir, &buffer_dir[pos_dir*512]))
+        return 0;
+
+    return 0;
 }
 
 int fs_remove(char *file_name) {
@@ -159,6 +216,7 @@ int fs_remove(char *file_name) {
   return 0;
 }
 
+/* a partir daqui é pra prox fase */
 int fs_open(char *file_name, int mode) {
   printf("Função não implementada: fs_open\n");
   return -1;
