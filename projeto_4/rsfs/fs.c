@@ -161,52 +161,48 @@ int fs_list(char *buffer, int size) {
     return 0;
 }
 
-// tratar o caso de strlen(file_name) > 25
 int fs_create(char* file_name) {
-    int flag = 0, pos_dir, cont_ocupado = 0, pos_fat;    
+    int pos_dir, pos_fat, i, j;    
     char *buffer_fat = (char*) fat;
     char *buffer_dir = (char*) dir;
 
-
-    // procura primeira posição livre no vetor de diretórios
-    for(int i = 0; i < 128; i++){
-        if(!strcmp(file_name, dir[i].name))
-            return 0;
-        if(dir[i].used == DIR_LIVRE && flag != 1){
-            pos_dir = i;
-            flag = 1;
-        } else if(dir[i].used == DIR_USADO)
-            cont_ocupado++;
-    }
-
-    if(cont_ocupado == 127){
-        printf("Não há espaço!\n");
-        return 0;
-    }
-
-    // procura o primeiro espaço livre na FAT
-    for(int i = 33; i < TAM_FAT; i++){
+/* ----------- MANIPULAÇÃO EM MEMÓRIA ------------- */
+    // busca a primeira posição livre na fat
+    for(i = 33; i < TAM_FAT; i++){
         if(fat[i] == LIVRE){
             pos_fat = i;
-            fat[i] = pos_dir; 
-            // escreve no disco
-            printf("buffer_fat = %s\n", &buffer_fat[pos_fat*512]);
-            printf("buffer_dir = %s\n", &buffer_dir[pos_dir*512]);
-            if(!bl_write(pos_fat*8, &buffer_fat[pos_fat*512]))
-                return 0;
             break;
         }
     }
-
-    printf("pos_fat = %d, pos_dir = %d\n", pos_fat, pos_dir);
-    // adiciona as infos do diretório
-    strcpy(dir[pos_dir].name, file_name);
+    
+    // busca a primeira posição livre no vetor de diretórios
+    for(i = 0; i < 128; i++){
+        if(dir[i].used == 0){
+            pos_dir = i;
+            break;
+        }
+    }
+    
+    // seta infos dir 
+    dir[pos_dir].used = 1;
     dir[pos_dir].size = 0;
-    dir[pos_dir].used = DIR_USADO;
     dir[pos_dir].first_block = pos_fat;
+    strcpy(dir[pos_dir].name, file_name);
 
-    if(!bl_write(pos_dir, &buffer_dir[pos_dir*512]))
-        return 0;
+    // marca a fat com o último agrupamento do diretório
+    fat[pos_fat] = ULTIMO;
+
+/* ----------- MANIPULAÇÃO EM DISCO ------------- */
+
+    for(i = 0; i < 256; i++){
+        if(!bl_write(i, &buffer_fat[i * 512]))
+            return 0;
+    }
+
+    for(i = 0, j = 256; i < 128; i++){
+        if(!bl_write(j + i, &buffer_dir[i * 512]))
+            return 0;
+    }
 
     return 0;
 }
