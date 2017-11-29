@@ -141,23 +141,23 @@ int fs_free() {
 
 int fs_list(char *buffer, int size) {
     char buffer_int[100];
+    char buffer_mem[size];
     memset(buffer_int, '\0', 100);
-    strcpy(buffer, "\0");
+    strcpy(buffer_mem, "\0");
 
-    // pensar nisso depois 
     for(int i = 0; i < 128; i++){
         if(dir[i].used){
-            strcat(buffer, dir[i].name);
-            strcat(buffer, "\t\t");
+            strcat(buffer_mem, dir[i].name);
+            strcat(buffer_mem, "\t\t");
             sprintf(buffer_int, "%d", dir[i].size);
-            strcat(buffer, buffer_int);
-            strcat(buffer, "\n");
-            
-            // TODO: TIRAR ESSE PRINTF DEPOIS
-            //printf("%s\n", dir[i].name);
-            printf("%s", buffer);
+            strcat(buffer_mem, buffer_int);
+            strcat(buffer_mem, "\n");
         }
     }
+
+    strcpy(buffer, buffer_mem);
+    // TODO: TIRAR ESSE PRINTF DEPOIS
+    printf("%s", buffer);
     return 0;
 }
 
