@@ -166,7 +166,7 @@ int fs_create(char* file_name) {
     char *buffer_fat = (char*) fat;
     char *buffer_dir = (char*) dir;
 
-/* ----------- MANIPULAÇÃO EM MEMÓRIA ------------- */
+    /* ----------- MANIPULAÇÃO EM MEMÓRIA ------------- */
     // busca a primeira posição livre na fat
     for(i = 33; i < TAM_FAT; i++){
         if(fat[i] == LIVRE){
@@ -184,7 +184,7 @@ int fs_create(char* file_name) {
     }
     
     // seta infos dir 
-    dir[pos_dir].used = 1;
+    dir[pos_dir].used = DIR_USADO;
     dir[pos_dir].size = 0;
     dir[pos_dir].first_block = pos_fat;
     strcpy(dir[pos_dir].name, file_name);
@@ -192,8 +192,7 @@ int fs_create(char* file_name) {
     // marca a fat com o último agrupamento do diretório
     fat[pos_fat] = ULTIMO;
 
-/* ----------- MANIPULAÇÃO EM DISCO ------------- */
-
+    /* ----------- MANIPULAÇÃO EM DISCO ------------- */
     for(i = 0; i < 256; i++){
         if(!bl_write(i, &buffer_fat[i * 512]))
             return 0;
@@ -208,8 +207,44 @@ int fs_create(char* file_name) {
 }
 
 int fs_remove(char *file_name) {
-  printf("Função não implementada: fs_remove\n");
-  return 0;
+    int pos_dir, pos_fat, i, j, flag = 0;
+    char *buffer_fat = (char*) fat;
+    char *buffer_dir = (char*) dir;
+    
+    /* ----------- MANIPULAÇÃO EM MEMÓRIA ------------- */
+    for(i = 0; i < 128; i++){
+        if(!strcmp(dir[i].name, file_name)){
+            pos_dir = i;
+            pos_fat = dir[i].first_block;
+            flag = 1;
+            break;
+        }
+    }
+    
+    if(!flag){
+        printf("Arquivo não encontrado\n");
+        return 0;
+    }
+     
+    memset(dir[pos_dir].name, '\0', strlen(dir[pos_dir].name));
+    dir[pos_dir].first_block = 0;
+    dir[pos_dir].used = DIR_LIVRE;
+    dir[pos_dir].size = 0;
+    
+    fat[pos_fat] = LIVRE;
+
+    /* ----------- MANIPULAÇÃO EM DISCO ------------- */
+    for(i = 0; i < 256; i++) {
+        if(!bl_write(i, &buffer_fat[i * 512]))
+            return 0;
+    }
+
+    for(i = 0, j = 256; i < 128; i++) {
+        if(!bl_write(j + i, &buffer_dir[i * 512]))
+            return 0;
+    }
+
+    return 0;
 }
 
 /* a partir daqui é pra prox fase */
