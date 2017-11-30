@@ -34,6 +34,8 @@
 #define DIR_LIVRE 0
 #define DIR_USADO 1
 #define TAM_FAT 65536
+#define QTD_SETOR_DIR 8
+#define INICIO_DIR 256
 
 unsigned short fat[65536];
 
@@ -50,14 +52,12 @@ int fs_init() {
  	int i = 0, format = 0, j = 0;
  	char *buffer_fat = (char *) fat;
  	char *buffer_dir = (char *) dir;
- 	char op;
    
     // carrega dados do disco
-    for (i = 0; i < 256; i++){
+    for (i = 0; i < INICIO_DIR; i++){
 		if(!bl_read(i, &buffer_fat[i*512]))
 			return 0;
     }
-	
 
 	// VERIFICA SE O DISCO ESTÁ FORMATADO
 	for (i = 0; i < 32; i++){
@@ -67,10 +67,10 @@ int fs_init() {
 		}
 	}
 	
-	if(format){
+	if(format)
         printf("O disco não está formatado\n");
-    } else {
-        for (i = 0, j = 256; i < 8; i++){
+    else {
+        for (i = 0, j = INICIO_DIR; i < QTD_SETOR_DIR; i++){
             if(!bl_read(j + i, &buffer_dir[i*512]))
                 return 0;
         }	
@@ -100,11 +100,11 @@ int fs_format() {
   	}
   	
   	// ESCREVE NO ARQUIVO IMAGEM A FAT E O DIRETORIO
-	for (i = 0; i < 256; i++)
+	for (i = 0; i < INICIO_DIR; i++)
 		if(!bl_write(i, &buffer_fat[i*512]))
 			return 0;
 
-	for (i = 0, j = 256; i < 8; i++)
+	for (i = 0, j = INICIO_DIR; i < QTD_SETOR_DIR; i++)
 		if(!bl_write(j + i, &buffer_dir[i*512]))
 			return 0;
 	
@@ -143,7 +143,7 @@ int fs_list(char *buffer, int size) {
 
     strcpy(buffer, buffer_mem);
     // TODO: TIRAR ESSE PRINTF DEPOIS
-    printf("%s", buffer);
+    // printf("%s", buffer);
     return 0;
 }
 
@@ -169,6 +169,11 @@ int fs_create(char* file_name) {
         }
     }
     
+    if(strlen(file_name) > 25){
+        printf("Nome do arquivo precisa ter menos de 25 caracteres!\n");
+        return 0;
+    }
+   
     // seta infos dir 
     dir[pos_dir].used = DIR_USADO;
     dir[pos_dir].size = 0;
@@ -179,12 +184,12 @@ int fs_create(char* file_name) {
     fat[pos_fat] = ULTIMO;
 
     /* ----------- MANIPULAÇÃO EM DISCO ------------- */
-    for(i = 0; i < 256; i++){
+    for(i = 0; i < INICIO_DIR; i++){
         if(!bl_write(i, &buffer_fat[i * 512]))
             return 0;
     }
 
-    for(i = 0, j = 256; i < 8; i++){
+    for(i = 0, j = INICIO_DIR; i < QTD_SETOR_DIR; i++){
         if(!bl_write(j + i, &buffer_dir[i * 512]))
             return 0;
     }
@@ -220,12 +225,12 @@ int fs_remove(char *file_name) {
     fat[pos_fat] = LIVRE;
 
     /* ----------- MANIPULAÇÃO EM DISCO ------------- */
-    for(i = 0; i < 256; i++) {
+    for(i = 0; i < INICIO_DIR; i++) {  
         if(!bl_write(i, &buffer_fat[i * 512]))
             return 0;
     }
 
-    for(i = 0, j = 256; i < 8; i++) {
+    for(i = 0, j = INICIO_DIR; i < QTD_SETOR_DIR; i++) {
         if(!bl_write(j + i, &buffer_dir[i * 512]))
             return 0;
     }
@@ -270,4 +275,3 @@ int fs_read(char *buffer, int size, int file) {
   printf("Função não implementada: fs_read\n");
   return -1;
 }
-
