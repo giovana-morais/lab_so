@@ -17,18 +17,20 @@
 
 \begin{document}
 % Cabeçalho simples
-\begin{center}\textbf{Universidade Federal de São Carlos}\end{center}
-\begin{center}\textbf{Laboratório de Sistemas Operacionais}\end{center}
-
+\begin{center}\Large{\textbf{Universidade Federal de São Carlos}}\end{center}
+\begin{center}\Large{\textbf{Laboratório de Sistemas Operacionais}}\end{center}
+\vspace{0.5cm}
 \noindent Gabriel de Paula \hfill 587710
 
-\noindent Giovana Morais \hfill 587591
+\noindent Giovana Vieira de Morais \hfill 587591
 
 \noindent Mateus Abreu \hfill 612618
 
 \noindent Thiago Borges da Silva \hfill 613770
 
-\noindent \textbf{Projeto Final - Sitema de Arquivos - Fase intermediária}
+\vspace{0.5cm}
+
+\noindent \begin{center}\Large{\textbf{Sistema de Arquivos -- Fase intermediária}}\end{center}
 
 \noindent \rule{\linewidth}{1.5pt}
 
@@ -36,42 +38,43 @@
 \section{Introdução}
 Este relatório tem como objetivo entender mais a fundo a construção de software básico, construindo um sistema de arquivos elementar a partir de um dispositivo de disco genérico. Nele são apresentadas as soluções para resolver as funções da fase parcial do projeto final da Disciplina de Laboratório de Sistemas Operacionais.
 
-\section{Função de Formatação - \textit{fs\_format()}}
+\section{Função de Formatação -- \texttt{fs\_format()}}
 \par
-Inicialmente, definimos as 32 primeiras posições do vetor \textit{FAT} como agrupamento de \textit{FAT}, isso é, atribuir a estas posições o valor 3 (definido por uma constante). A próxima posição, ou seja, a posição 33 do vetor \textit{FAT}, definimos como agrupamento de diretórios, também definida por uma constante de valor 4. Todo o restante deste vetor é definido como agrupamento livre, que também foi definido por uma constante, que por sua vez possuía valor 2.
+Inicialmente, definimos as 32 primeiras posições do vetor \texttt{FAT} como agrupamento de \texttt{FAT}, isso é, atribuir a estas posições o valor 3 (definido por uma constante). A próxima posição, ou seja, a posição 33 do vetor \texttt{FAT}, definimos como agrupamento de diretórios, também definida por uma constante de valor 4. Todo o restante deste vetor é definido como agrupamento livre, que também foi definido por uma constante, que por sua vez possuía valor 2.
 \par
-Esta função também é responsável pela inicialização da struct de diretórios, atribuindo aos  atributos de cada posição deste vetor valores padrão (\textit{.size} = 0, \textit{.used} = 0).
+Esta função também é responsável pela inicialização da struct de diretórios, atribuindo aos  atributos de cada posição deste vetor valores padrão (\texttt{.size} = 0, \texttt{.used} = 0).
 \par
 Por fim, esta função grava a formatação manipulada em memória na imagem, através de dois laços de repetição. O primeiro, é responsável por gravar as alterações até o inicio dos diretórios e o próximo é responsável por gravar do inicio dos diretórios até seu fim.
 
-\section{Função de Inicialização -  \textit{fs\_init()}}
+\section{Função de Inicialização --  \texttt{fs\_init()}}
 \par
 Está função é responsável por carregar em memória os dados da imagem até o inicio do diretório e verificar se ele está formatado, se o disco estiver formatado, o próximo estágio é carregar o restante da imagem em memória, caso contrário, o sistema informa que o disco não está formatado.
 \par
-A verificação para saber se está formatado ou não é feita analisando apenas o início da \textit{FAT}, se este início seguir o padrão de 32 posições contendo agrupamento de \textit{FAT} e uma única posição contendo agrupamento de diretório, é considerado que está formatado.
+A verificação para saber se está formatado ou não é feita analisando apenas o início da \texttt{FAT}, se este início seguir o padrão de 32 posições contendo agrupamento de \texttt{FAT} e uma única posição contendo agrupamento de diretório, é considerado que está formatado.
 
-\section{Funções de Espaços Livres e Listagem -  \textit{fs\_free()} e  \textit{fs\_list(char *buffer, int size)}}
-\par
-A tarefa desta função é retornar a quantidade de memória livre e isto é realizado através de uma verificação sequencial no vetor da \textit{FAT}. Por fim, este valor obtido é multipicado por uma constante que representa o tamanho de setor, ou seja, 512.
-\par
-função de listagem nesse paragrafo aquiiiiiiiii
+\section{Funções de Espaços Livres e Listagem --  \texttt{fs\_free()} e  \texttt{fs\_list(char *buffer, int size)}}
 
-\section{Função de Criação de Arquivo - \textit{fs\_create(char* file\_name)}}
-\par
-Inicialmente, é necessário encontrar os espaços livres do vetor da \textit{FAT} e no vetor de diretórios, caso não encontre, o sistema informa que não existe espaço livre, caso contrário, a posição livre encontrada anteriormente será atribuida como usada, o nome é escolhido a partir do nome que foi fornecido na chamada do \textit{fs\_create()}, seu tamanho será 0 e seu primeiro bloco é a primeira posição livre da \textit{FAT}, que também foi encontrada anteriormente.
-\par
-O paragráfo anteriormente descrevia a manipulação em memória, sendo assim, necessita-se de manipulação de disco, então novamente temos os dois laços citados na função de inicialização, que reescevem o \textit{buffer} inteiro. O primeiro laço reescreve até o inicio de diretórios e o segundo reescreve a parte de diretórios.
 
-\section{Função de Remoção de Arquivo - \textit{fs\_remove(char* file\_name)}}
+A tarefa desta função é retornar a quantidade de memória livre e isto é realizado através de uma verificação sequencial no vetor da \texttt{FAT}. Por fim, este valor obtido é multipicado por uma constante que representa o tamanho de setor, ou seja, 512.
+
+
+A função de listagem tem como objetivo retornar em um buffer os nomes e os respectivos tamanhos dos arquivos que estão no disco. Para isso, foi criado um laço que percorre o vetor de diretórios (cujos dados neste ponto da execução já estão em memória) concatenando nomes e tamanhos de acordo com a formatação requisitada. 
+
+\section{Função de Criação de Arquivo -- \texttt{fs\_create(char* file\_name)}}
 \par
-É fornecido o nome do arquivo a ser removido ao chamar o \textit{fs\_remove()}, este nome é utilizado na busca sequencial e, se não encontrado, o sistema informa que o arquivo não existe naquele disco, caso contrário, a localização dos dados sofre um \textit{reset} (mesmo tratamento anteriormente feito no \textit{fs\_init()}). Novamente, é utilizado dos laços de repetição para a reescrita da imagem.
+Inicialmente, é necessário encontrar os espaços livres do vetor da \texttt{FAT} e no vetor de diretórios, caso não encontre, o sistema informa que não existe espaço livre, caso contrário, a posição livre encontrada anteriormente será atribuida como usada, o nome é escolhido a partir do nome que foi fornecido na chamada do \texttt{fs\_create()}, seu tamanho será 0 e seu primeiro bloco é a primeira posição livre da \texttt{FAT}, que também foi encontrada anteriormente.
+\par
+O paragráfo anteriormente descrevia a manipulação em memória, sendo assim, necessita-se de manipulação de disco, então novamente temos os dois laços citados na função de inicialização, que reescevem o \texttt{buffer} inteiro. O primeiro laço reescreve até o inicio de diretórios e o segundo reescreve a parte de diretórios.
+
+\section{Função de Remoção de Arquivo -- \texttt{fs\_remove(char* file\_name)}}
+\par
+É fornecido o nome do arquivo a ser removido ao chamar o \texttt{fs\_remove()}, este nome é utilizado na busca sequencial e, se não encontrado, o sistema informa que o arquivo não existe naquele disco, caso contrário, a localização dos dados sofre um \texttt{reset} (mesmo tratamento anteriormente feito no \texttt{fs\_init()}). Novamente, é utilizado dos laços de repetição para a reescrita da imagem.
 
 
 \section{Considerações Finais}
 \par
 A maior dificuldade encontrada foi a realização da aritmética, pois depois de realizar diversas operações, obtivemos um resultado que parecia estar correto, porém o sistema estava reescrevendo os agrupamentos de diretório como se fossem agrupamentos de FAT.
 \par
-Por fim, executamos o \textit{GHex} e confirmamos que a alteração nestas aritméticas concertou este \textit{bug} encontrado.
-
+Por fim, executamos o \texttt{GHex} e confirmamos que a alteração nestas aritméticas consertou este \textit{bug} encontrado.
 
 \end{document}
