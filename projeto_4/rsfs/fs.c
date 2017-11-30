@@ -55,7 +55,7 @@ int fs_init() {
    
     // carrega dados do disco
     for (i = 0; i < INICIO_DIR; i++){
-		if(!bl_read(i, &buffer_fat[i*512]))
+		if(!bl_read(i, &buffer_fat[i*SECTORSIZE]))
 			return 0;
     }
 
@@ -71,7 +71,7 @@ int fs_init() {
         printf("O disco não está formatado\n");
     else {
         for (i = 0, j = INICIO_DIR; i < QTD_SETOR_DIR; i++){
-            if(!bl_read(j + i, &buffer_dir[i*512]))
+            if(!bl_read(j + i, &buffer_dir[i*SECTORSIZE]))
                 return 0;
         }	
     }
@@ -101,11 +101,11 @@ int fs_format() {
   	
   	// ESCREVE NO ARQUIVO IMAGEM A FAT E O DIRETORIO
 	for (i = 0; i < INICIO_DIR; i++)
-		if(!bl_write(i, &buffer_fat[i*512]))
+		if(!bl_write(i, &buffer_fat[i*SECTORSIZE]))
 			return 0;
 
 	for (i = 0, j = INICIO_DIR; i < QTD_SETOR_DIR; i++)
-		if(!bl_write(j + i, &buffer_dir[i*512]))
+		if(!bl_write(j + i, &buffer_dir[i*SECTORSIZE]))
 			return 0;
 	
 	return 1;
@@ -120,7 +120,7 @@ int fs_free() {
             cont++;
     }
 
-    mem_livre = cont * 512;
+    mem_livre = cont * SECTORSIZE;
 
     return mem_livre;
 }
@@ -148,7 +148,7 @@ int fs_list(char *buffer, int size) {
 }
 
 int fs_create(char* file_name) {
-    int pos_dir, pos_fat, i, j;    
+    int pos_dir = -1, pos_fat, i, j;   
     char *buffer_fat = (char*) fat;
     char *buffer_dir = (char*) dir;
 
@@ -168,6 +168,12 @@ int fs_create(char* file_name) {
             break;
         }
     }
+
+    /* VERIFICAÇÕES */
+    if(i == 127 && pos_dir == -1){
+        printf("Não há espaço livre!\n");
+        return 0;
+    }
     
     if(strlen(file_name) > 25){
         printf("Nome do arquivo precisa ter menos de 25 caracteres!\n");
@@ -185,12 +191,12 @@ int fs_create(char* file_name) {
 
     /* ----------- MANIPULAÇÃO EM DISCO ------------- */
     for(i = 0; i < INICIO_DIR; i++){
-        if(!bl_write(i, &buffer_fat[i * 512]))
+        if(!bl_write(i, &buffer_fat[i * SECTORSIZE]))
             return 0;
     }
 
     for(i = 0, j = INICIO_DIR; i < QTD_SETOR_DIR; i++){
-        if(!bl_write(j + i, &buffer_dir[i * 512]))
+        if(!bl_write(j + i, &buffer_dir[i * SECTORSIZE]))
             return 0;
     }
 
@@ -226,12 +232,12 @@ int fs_remove(char *file_name) {
 
     /* ----------- MANIPULAÇÃO EM DISCO ------------- */
     for(i = 0; i < INICIO_DIR; i++) {  
-        if(!bl_write(i, &buffer_fat[i * 512]))
+        if(!bl_write(i, &buffer_fat[i * SECTORSIZE]))
             return 0;
     }
 
     for(i = 0, j = INICIO_DIR; i < QTD_SETOR_DIR; i++) {
-        if(!bl_write(j + i, &buffer_dir[i * 512]))
+        if(!bl_write(j + i, &buffer_dir[i * SECTORSIZE]))
             return 0;
     }
 
