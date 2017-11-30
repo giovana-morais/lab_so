@@ -67,28 +67,14 @@ int fs_init() {
 		}
 	}
 	
-	if(fat[32] != A_DIR)
-		format = 1;
-	
-	for (i = 33; i < TAM_FAT; i++){
-		if(fat[i] != LIVRE){
-			format = 1;
-			break;
-		}
-	}
-	
 	if(format){
-		printf("O disco nao esta formatado.\nDeseja formata-lo? [y]=yes [n]=no\n");
-		scanf("%c", &op);
-		if(op == 'y')
-			fs_format();
-        else {
-            for (i = 0, j = 256; i < 128; i++){
-                if(!bl_read(j + i, &buffer_dir[i*512]))
-                    return 0;
-            }
-        }
-	}	
+        printf("O disco não está formatado\n");
+    } else {
+        for (i = 0, j = 256; i < 8; i++){
+            if(!bl_read(j + i, &buffer_dir[i*512]))
+                return 0;
+        }	
+    }
 	return 1;
 }
 
@@ -118,7 +104,7 @@ int fs_format() {
 		if(!bl_write(i, &buffer_fat[i*512]))
 			return 0;
 
-	for (i = 0, j = 256; i < 128; i++)
+	for (i = 0, j = 256; i < 8; i++)
 		if(!bl_write(j + i, &buffer_dir[i*512]))
 			return 0;
 	
@@ -198,7 +184,7 @@ int fs_create(char* file_name) {
             return 0;
     }
 
-    for(i = 0, j = 256; i < 128; i++){
+    for(i = 0, j = 256; i < 8; i++){
         if(!bl_write(j + i, &buffer_dir[i * 512]))
             return 0;
     }
@@ -239,7 +225,7 @@ int fs_remove(char *file_name) {
             return 0;
     }
 
-    for(i = 0, j = 256; i < 128; i++) {
+    for(i = 0, j = 256; i < 8; i++) {
         if(!bl_write(j + i, &buffer_dir[i * 512]))
             return 0;
     }
@@ -247,7 +233,10 @@ int fs_remove(char *file_name) {
     return 0;
 }
 
-/* a partir daqui é pra prox fase */
+/*
+ *  Manter um buffer interno pra gerenciar os bytes que o usuário quer ler
+ *  independente dos 4K que temos que puxar do disco.
+ */
 int fs_open(char *file_name, int mode) {
   printf("Função não implementada: fs_open\n");
   return -1;
@@ -258,11 +247,25 @@ int fs_close(int file)  {
   return 0;
 }
 
+/*  Caso o buffer tiver cheio, ir na fat e procurar o próximo bloco livre.
+ *  Aí é só recarregar o buffer e continuar a escrita.
+ *  A posição de escrita é sempre na última posição porque não tem seek.
+ */
 int fs_write(char *buffer, int size, int file) {
   printf("Função não implementada: fs_write\n");
   return -1;
 }
 
+/*  > Lê dados do disco
+ *  > Guarda no buffer
+ *  > Cria um marcador de leitura pra esse buffer pq cada leitura vai
+ *  retornar esses bytes e ver se existem
+ *      > Ficar atento pra quando estiver perto do fim pq se passar do número
+ *      de bytes do final, vai ter que recarregar o buffer com os prox 4096 
+ *      bytes do disco
+ *      > Checar fim do buffer do usuário, fim do arquivo e fim do buffer do 
+ *      usuário
+ */
 int fs_read(char *buffer, int size, int file) {
   printf("Função não implementada: fs_read\n");
   return -1;
