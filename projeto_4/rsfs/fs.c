@@ -20,6 +20,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/* Grupo:
+ *      Gabriel de Paula
+ *      Giovana Morais
+ *      Mateus Abreu
+ *      Thiago Borges
+ */
+
 #include <stdio.h>
 #include <string.h>
 
@@ -48,6 +55,9 @@ typedef struct {
 
 dir_entry dir[128];
 
+/* Carrega informações existentes para as estruturas em memória e checa por
+ * possíveis inconsistências. Nesse caso, avisa que o disco não está
+ * formatado */
 int fs_init() {
  	int i = 0, format = 0, j = 0;
  	char *buffer_fat = (char *) fat;
@@ -78,6 +88,7 @@ int fs_init() {
 	return 1;
 }
 
+/* Formata o disco */
 int fs_format() {
  	int i = 0, j;
  	char *buffer_fat = (char *) fat;
@@ -111,8 +122,8 @@ int fs_format() {
 	return 1;
 }
 
+/* Faz a contagem da memória livre */
 int fs_free() {
-    //printf("Função não implementada: fs_free\n");
     int cont = 0, mem_livre;
 
     for(int i = 33; i < bl_size(); i++){
@@ -125,6 +136,7 @@ int fs_free() {
     return mem_livre;
 }
 
+/* Lista o nome e o tamanho dos arquivos existentes */
 int fs_list(char *buffer, int size) {
     char buffer_int[100];
     char buffer_mem[size];
@@ -142,11 +154,10 @@ int fs_list(char *buffer, int size) {
     }
 
     strcpy(buffer, buffer_mem);
-    // TODO: TIRAR ESSE PRINTF DEPOIS
-    // printf("%s", buffer);
     return 0;
 }
 
+/* Cria um arquivo de tamanho 0 na primeira posição livre encontrada */
 int fs_create(char* file_name) {
     int pos_dir = -1, pos_fat, i, j;   
     char *buffer_fat = (char*) fat;
@@ -203,6 +214,7 @@ int fs_create(char* file_name) {
     return 0;
 }
 
+/* Remove um arquivo de nome file_name */
 int fs_remove(char *file_name) {
     int pos_dir, pos_fat, i, j, flag = 0;
     char *buffer_fat = (char*) fat;
