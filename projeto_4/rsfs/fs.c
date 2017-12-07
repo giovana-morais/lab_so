@@ -176,10 +176,24 @@ int fs_list(char *buffer, int size) {
 
 /* Cria um arquivo de tamanho 0 na primeira posição livre encontrada */
 int fs_create(char* file_name) {
-    int pos_dir = -1, pos_fat, i, j;
+    int pos_dir = -1, pos_fat, i, j, flag = 0;
     char *buffer_fat = (char*) fat;
     char *buffer_dir = (char*) dir;
 
+    // verifica se o arquivo já existe na memória
+    for(i = 0; i < 128; i++){
+        if(!strcmp(dir[i].name, file_name)){
+            pos_dir = i;
+            pos_fat = dir[i].first_block;
+            flag = 1;
+            break;
+        }
+    }
+
+    if(flag){
+        printf("Arquivo já existe\n");
+        return 0;
+    }
     /* ----------- MANIPULAÇÃO EM MEMÓRIA ------------- */
     // busca a primeira posição livre na fat
     for(i = 33; i < TAM_FAT; i++){
@@ -292,20 +306,20 @@ int fs_open(char *file_name, int mode) {
 		}
 	}
 
-	if (mode == FS_R){
+	if(mode == FS_R){
 		//Se entrar aqui, significa que o arquivo não existe e um erro deve ser gerado
 		if (!flag){
 			printf("Arquivo nao existe\n");
 			return -1;
 		} else {	//Caso entre aqui, significa que o arquivo existe
-      for(i = 0; i < 128; i++){
-        if(id_arq[i].first_block = -1){
-          id_arq[i].first_block = pos_fat;
-          id_arq[i].mode = mode;
-          id_arq[i].f_mode = 1;
-          return i;
-        }
-      }
+          for(i = 0; i < 128; i++){
+            if(id_arq[i].first_block = -1){
+              id_arq[i].first_block = pos_fat;
+              id_arq[i].mode = mode;
+              id_arq[i].f_mode = 1;
+              return i;
+            }
+          }
 			//Implementar fopen (blread e blwrite)
 		}
 	} else if (mode == FS_W){
@@ -317,8 +331,6 @@ int fs_open(char *file_name, int mode) {
 			fs_create(file_name);
 		}
 	}
-
-
   return -1;
 }
 
