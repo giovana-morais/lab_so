@@ -43,10 +43,6 @@
 #define TAM_FAT 65536
 #define QTD_SETOR_DIR 8
 #define INICIO_DIR 256
-#define F_OPEN 0
-#define F_READ 1
-#define F_WRITE 2
-
 
 unsigned short fat[65536];
 
@@ -61,9 +57,9 @@ dir_entry dir[128];
 
 typedef struct {
 	unsigned short first_block; //-1 é vazio
-	int mode;//-1 vazio
 	int f_mode;	//f_mode será 0 para open, 1 para read , 2 para write e -1 pra vazio
-} id_arquivo;// Estrutura utilizada como identificador de arquivos
+    int cont_leitura;
+} id_arquivo; // Estrutura utilizada como identificador de arquivos
 
 id_arquivo id_arq[128];
 
@@ -97,10 +93,11 @@ int fs_init() {
                 return 0;
         }
     }
+    
     for(i = 0; i < 128; i++){
-      id_arq[i].first_block = -1;
-      id_arq[i].mode = -1;
-      id_arq[i].f_mode = -1;
+        id_arq[i].first_block = DIR_LIVRE; 
+        id_arq[i].f_mode = -1;
+        id_arq[i].cont_leitura = 0;
     }
 	return 1;
 }
@@ -123,7 +120,6 @@ int fs_format() {
 	// INICIALIZA A STRUCT DIRETORIO
 	for(i = 0; i < 128; i++){
 	  	dir[i].used = DIR_LIVRE;
-  		//dir[i].first_block = ULTIMO;
   		dir[i].size = 0;
   	}
 
@@ -292,9 +288,10 @@ int fs_remove(char *file_name) {
  *  independente dos 4K que temos que puxar do disco.
  */
 int fs_open(char *file_name, int mode) {
-	//printf("Função não implementada: fs_open\n");
 	//open prepara estruturas para serem utilizadas no read e write, gerar um identificador pro arquivo.
 	int i = 0, pos_dir, pos_fat, flag = 0;
+
+    printf("open\n");
 
 	//Nesse for iremos percorrer todo o diretório em busca de um arquivo com o nome file_name
 	for(i = 0; i < 128; i++){
@@ -308,44 +305,66 @@ int fs_open(char *file_name, int mode) {
 
 	if(mode == FS_R){
 		//Se entrar aqui, significa que o arquivo não existe e um erro deve ser gerado
-		if (!flag){
+		if(!flag){
 			printf("Arquivo nao existe\n");
 			return -1;
-		} else {	//Caso entre aqui, significa que o arquivo existe
-          for(i = 0; i < 128; i++){
-            if(id_arq[i].first_block = -1){
-              id_arq[i].first_block = pos_fat;
-              id_arq[i].mode = mode;
-              id_arq[i].f_mode = 1;
-              return i;
+        } 
+        // salva no vetor de identificadores arquivos abertos 
+        for(i=0; i < 128; i++){
+            if(!id_arq[i].first_block){
+                id_arq[i].first_block = pos_fat;
+                id_arq[i].f_mode = FS_R;
+                return i;
             }
-          }
-			//Implementar fopen (blread e blwrite)
-		}
-	} else if (mode == FS_W){
-		//Se entrar aqui, significa que o arquivo não existe e então iremos criá-lo.
-		if (!flag){
-			fs_create(file_name);
-		} else {
-			fs_remove(file_name);
-			fs_create(file_name);
-		}
-	}
-  return -1;
+        }
+    } else if (mode == FS_W){
+        printf("fs_w\n");
+        //Se entrar aqui, significa que o arquivo não existe e então iremos criá-lo.
+        if(!flag)
+            fs_create(file_name);
+        else {
+            fs_remove(file_name);
+            fs_create(file_name);
+        }
+
+        for(i = 0; i < 128; i++){
+            if(id_arq[i].first_block == -1){
+                id_arq[i].first_block = pos_fat;
+                id_arq[i].f_mode = FS_W;
+                return i;
+            }
+        }
+    }
+    return -1;
 }
 
-int fs_close(int file)  {
-  printf("Função não implementada: fs_close\n");
-  return 0;
+/*
+ * Procura o arquivo no vetor de identificadores e verifica qual o 
+ * modo (leitura ou escrita). 
+ * Retorna erro caso não seja nenhum dos dois
+ * Caso contrário, tira o arquivo do vetor.
+ */
+int fs_close(int file){
+    if(id_arq[file].f_mode != 0 && id_arq[file].f_mode != 1){
+        printf("Arquivo não aberto para leitura\n");
+        return -1;
+    }
+
+    id_arq[file].f_mode = -1;
+    id_arq[file].first_block = DIR_LIVRE;
+    id_arq[file].cont_leitura = 0;
+
+    return 0;
 }
 
-/*  Caso o buffer tiver cheio, ir na fat e procurar o próximo bloco livre.
+/*
+ *  Caso o buffer tiver cheio, ir na fat e procurar o próximo bloco livre.
  *  Aí é só recarregar o buffer e continuar a escrita.
  *  A posição de escrita é sempre na última posição porque não tem seek.
  */
 int fs_write(char *buffer, int size, int file) {
-  printf("Função não implementada: fs_write\n");
-  return -1;
+    printf("Função não implementada: fs_write\n");
+    return -1;
 }
 
 /*  > Lê dados do disco
@@ -359,6 +378,50 @@ int fs_write(char *buffer, int size, int file) {
  *      usuário
  */
 int fs_read(char *buffer, int size, int file) {
-  printf("Função não implementada: fs_read\n");
-  return -1;
+    char buffer_interno[4096];
+    int pos_dir,  cont_interno, cont, aux, qtde, qtde_aux = 0, prox, total = 0; 
+
+    printf("fs_read read\n");
+    pos_dir = id_arq[file].first_block;
+    
+    if(id_arq[file].f_mode != 1){
+        printf("Erro ao abrir o arquivo para leitura\n");
+        return -1;
+    }
+
+    cont_interno = id_arq[file].cont_leitura;
+    total += cont_interno;
+    if(!bl_read(INICIO_DIR + pos_dir, &buffer_interno[pos_dir*SECTORSIZE]))
+        return 0;
+
+    if(size <= CLUSTERSIZE)
+        qtde = 1;
+    else if(size%CLUSTERSIZE != 0)
+        qtde = 1 + (size / CLUSTERSIZE);
+    else
+        qtde = size / CLUSTERSIZE;
+
+    while(qtde_aux < qtde){
+        // o arquivo inteiro cabe no buffer e pode ser copiado de uma vez
+        while(cont_interno < CLUSTERSIZE && cont_interno < dir[pos_dir].size){
+           buffer[cont] = buffer_interno[cont_interno];
+           cont++;
+           cont_interno++;
+           total++;
+        }
+        printf("buffer fs_read: %s\n", buffer_interno);
+        
+        if(cont_interno >= CLUSTERSIZE){
+        	aux = dir[pos_dir].first_block;
+      		prox = fat[aux];
+        }
+
+		if(!bl_read(INICIO_DIR + prox, &buffer_interno[prox*SECTORSIZE]))
+		    return 0;		
+
+		qtde_aux++;
+		cont_interno = 0;
+		
+    }
+    return -1;
 }
