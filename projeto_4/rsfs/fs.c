@@ -363,7 +363,8 @@ int fs_close(int file){
  *  A posição de escrita é sempre na última posição porque não tem seek.
  */
 int fs_write(char *buffer, int size, int file) {
-    printf("Função não implementada: fs_write\n");
+    //printf("Função não implementada: fs_write\n");
+
     return -1;
 }
 
