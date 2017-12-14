@@ -446,14 +446,24 @@ int fs_write(char *buffer, int size, int file) {
         return -1;
 
     }
+
+    // atribuindo fat
     for(k = 0; k < 128; k++){
         if(id_arq[file].first_block == dir[k].first_block){
             dir[k].size = total;
             break;
         }
     }
+
+    for(i = 0, j = INICIO_DIR; i < QTD_SETOR_DIR; i++){
+        if(!bl_write(j + i, &buffer_dir[i * SECTORSIZE]))
+            return 0;
+    }
+
+
     return total;
 }
+
 int procura_fat(){
     int pos_fat = -1;
     for(int i = 33; i < TAM_FAT; i++){
