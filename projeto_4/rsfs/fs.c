@@ -397,7 +397,7 @@ int fs_close(int file){
  */
 int fs_write(char *buffer, int size, int file) {
     printf("Entrou no write\n");
-    int total = 0, pos_dir, prox_bloco, change = 0, i, j;
+    int total = 0, pos_dir, prox_bloco, change = 0, i, j, k = 0, pos_dir_size = 0, pos_fat = 0;
     char *buffer_fat = (char*) fat;
     char *buffer_dir = (char*) dir;
 
@@ -446,8 +446,12 @@ int fs_write(char *buffer, int size, int file) {
         return -1;
 
     }
-
-    // procura a prox posição livre na fat
+    for(k = 0; k < 128; k++){
+        if(id_arq[file].first_block == dir[k].first_block){
+            dir[k].size = total;
+            break;
+        }
+    }
     return total;
 }
 int procura_fat(){
