@@ -69,6 +69,8 @@ typedef struct {
 	  unsigned short first_block;
 	  int f_mode;
     int cont_leitura;
+    int cont_escrita;
+    char buffer_interno[CLUSTERSIZE];
 } id_arquivo;
 
 id_arquivo id_arq[128];
@@ -208,7 +210,7 @@ int fs_create(char* file_name) {
 
     // busca a primeira posição livre no vetor de diretórios
     for(i = 0; i < 128; i++){
-        if(dir[i].used == 0){
+        if(dir[i].used == DIR_LIVRE){
             pos_dir = i;
             break;
         }
@@ -244,7 +246,6 @@ int fs_create(char* file_name) {
         if(!bl_write(j + i, &buffer_dir[i * SECTORSIZE]))
             return 0;
     }
-
     return 0;
 }
 
@@ -286,7 +287,6 @@ int fs_remove(char *file_name) {
         if(!bl_write(j + i, &buffer_dir[i * SECTORSIZE]))
             return 0;
     }
-
     return 0;
 }
 
@@ -307,20 +307,20 @@ int fs_open(char *file_name, int mode) {
 	}
 
 	if(mode == FS_R){
-    printf("Sera se entra no read\n");
-		//Se entrar aqui, significa que o arquivo não existe e um erro deve ser gerado
-		if(!flag){
-			printf("Arquivo nao existe\n");
-			return -1;
-        }
-        // salva no vetor de identificadores arquivos abertos
+      printf("Sera se entra no read\n");
+		    //Se entrar aqui, significa que o arquivo não existe e um erro deve ser gerado
+  		if(!flag){
+  			printf("Arquivo nao existe\n");
+  			return -1;
+      }
+          // salva no vetor de identificadores arquivos abertos
         for(i = 0; i < 128; i++){
           //FIZEMOS UMA ALTERCAO AQUI
             if(!id_arq[i].first_block){
                 id_arq[i].first_block = dir[pos_dir].first_block;
                 id_arq[i].f_mode = FS_R;
                 id_arq[i].cont_leitura = 0;
-                printf("I retornado: %d\n", i);
+                id_arq[i].cont_escrita = 0;
                 return i;
             }
         }
@@ -342,7 +342,7 @@ int fs_open(char *file_name, int mode) {
                 id_arq[i].first_block = dir[pos_dir].first_block;
                 id_arq[i].f_mode = FS_W;
                 id_arq[i].cont_leitura = 0;
-                printf("que\n");
+                id_arq[i].cont_escrita = 0;
                 return i;
             }
         }
@@ -360,6 +360,8 @@ int fs_close(int file){
 /* TODO: PERGUNTAR:
       - precisa reescrever fat e diretório quando fechar o arquivo?
 */
+    int pos_dir = 0;
+
     if(file < 0 || file > 128){
         printf("Não existe o arquivo\n");
         return -1;
@@ -370,9 +372,15 @@ int fs_close(int file){
         return -1;
     }
 
+    pos_dir = id_arq[file].first_block;
+
+    if(!bl_write(pos_dir*8, id_arq[file].buffer_interno))
+        return -1;
+
     id_arq[file].f_mode = -1;
     id_arq[file].first_block = DIR_LIVRE;
     id_arq[file].cont_leitura = 0;
+
     return 0;
 }
 
@@ -382,12 +390,11 @@ int fs_close(int file){
  *  A posição de escrita é sempre na última posição porque não tem seek.
  */
 int fs_write(char *buffer, int size, int file) {
-    //printf("Função não implementada: fs_write\n");
-    char buffer_interno[CLUSTERSIZE];
-    int cont_interno = 0, cont = 0, total = 0, pos_dir, prox_bloco;
-    int qtd, qtd_aux = 0; //i, j;
     printf("Entrou no write\n");
-    memset(buffer_interno, '\0', CLUSTERSIZE);
+    int total = 0, pos_dir, prox_bloco, change = 0, i, j;
+    char *buffer_fat = (char*) fat;
+    char *buffer_dir = (char*) dir;
+
     /* VERIFICAÇÃO DE MODO */
     if(id_arq[file].f_mode != FS_W){
         printf("Erro ao abrir o arquivo para escrita\n");
@@ -395,8 +402,50 @@ int fs_write(char *buffer, int size, int file) {
     }
 
     pos_dir = id_arq[file].first_block;
+    printf("pos dir = %d\n", pos_dir);
 
-    /* calcula o número de blocos que vão ser necessários pra escrita */
+
+    while (id_arq[file].cont_escrita < size){
+      id_arq[file].buffer_interno[id_arq[file].cont_escrita] = buffer[id_arq[file].cont_escrita];
+
+      if (id_arq[file].cont_escrita >= CLUSTERSIZE) {
+        change = 1;
+        id_arq[file].cont_escrita = 0;
+        size -= CLUSTERSIZE;
+        if(!bl_write(pos_dir*8, id_arq[file].buffer_interno))
+            return -1;
+
+        prox_bloco = procura_fat();
+        if(prox_bloco == -1){
+            printf("Disco cheio!\n");
+            return -1;
+        }
+        fat[dir[pos_dir].first_block] = prox_bloco;
+        fat[prox_bloco] = ULTIMO;
+        pos_dir = prox_bloco;
+      } else {
+        id_arq[file].cont_escrita++;
+      }
+      total++;
+    }
+
+    if(change){
+      // ESCREVE NO ARQUIVO IMAGEM A FAT E O DIRETORIO
+    for (i = 0; i < INICIO_DIR; i++)
+      if(!bl_write(i, &buffer_fat[i*SECTORSIZE]))
+        return -1;
+
+    for (i = 0, j = INICIO_DIR; i < QTD_SETOR_DIR; i++)
+      if(!bl_write(j + i, &buffer_dir[i*SECTORSIZE]))
+        return -1;
+
+    }
+
+    // procura a prox posição livre na fat
+    return total;
+}
+
+    /* calcula o número de blocos que vão ser necessários pra escrita
     if(size <= CLUSTERSIZE)
         qtd = 1;
     else if(size%CLUSTERSIZE != 0)
@@ -406,13 +455,15 @@ int fs_write(char *buffer, int size, int file) {
 
     //printf("qtd: %d\n", qtd);
     //printf("size: %d  qtd_aux: %d  size do file: %d\n", size, qtd_aux, dir[file].size);
-    while(qtd_aux < qtd || size >= 0){
+    while(qtd_aux < qtd || size > 0){
         while(cont_interno < size && cont_interno < CLUSTERSIZE && size > 0){
             buffer_interno[cont_interno] = buffer[cont];
             cont_interno++;
             cont++;
             total++;
         }
+
+          printf("buffer interno = %s\n", buffer_interno);
 
         if(!bl_write(INICIO_DIR + pos_dir*8, &buffer_interno[qtd_aux*SECTORSIZE]))
             return -1;
@@ -432,7 +483,7 @@ int fs_write(char *buffer, int size, int file) {
     printf("Total de bytes escritos: %d\n", total);
     return total;
 }
-
+*/
 int procura_fat(){
     int pos_fat = -1;
     for(int i = 33; i < TAM_FAT; i++){
@@ -465,51 +516,53 @@ int fs_read(char *buffer, int size, int file) {
         return -1;
     }
 
-    /* TODO: verificar se o pos_dir tem que ser o first_block*8 ou não*/
-    pos_dir = id_arq[file].first_block;
-    total += cont_interno;
+    
 
-    /* calcula o número de blocos que vão ser carregados pra memória */
-    if(size <= CLUSTERSIZE)
-        qtd = 1;
-    else if(size % CLUSTERSIZE != 0)
-        qtd = 1 + (size / CLUSTERSIZE);
-    else
-        qtd = size / CLUSTERSIZE;
-
-    printf("Antes do bl_read\n");
-    printf("INICIO_DIR: %d\n", INICIO_DIR);
-    printf("pos_dir: %d\n", pos_dir);
-    printf("FILE: %d\n", file);
-
-    /* carrega o primeiro bloco pra memória */
-    if(!bl_read(INICIO_DIR + pos_dir*8, &buffer_interno[qtd_aux*SECTORSIZE]))
-        return -1;
-
-    while(qtd_aux < qtd || size >= 0){
-        while(cont_interno < size && cont_interno < CLUSTERSIZE && size > 0){
-           buffer[cont] = buffer_interno[cont_interno];
-           cont++;
-           cont_interno++;
-           total++;
-        }
-            dir[pos_dir].size = total;printf("buffer_interno fs_read: %s\n", buffer_interno);
-        printf("buffer fs_read: %s\n", buffer);
-        if(cont_interno >= CLUSTERSIZE){
-        	aux = dir[pos_dir].first_block;
-          id_arq[pos_dir].first_block = fat[aux];
-      		prox = fat[aux];
-        }
-
-    /* TODO: deveríamos DE NOVO fazer um aux*8 ou prox*8? */
-		if(!bl_read(INICIO_DIR + prox*8, &buffer[prox*SECTORSIZE]))
-		    return -1;
-
-		qtd_aux++;
-		cont_interno = 0;
-    size -= CLUSTERSIZE;
-    dir[pos_dir].size = total;
-    }
-    printf("Total de bytes lidos: %d\n", total);
-    return total;
+    // /* TODO: verificar se o pos_dir tem que ser o first_block*8 ou não*/
+    // pos_dir = id_arq[file].first_block;
+    // total += cont_interno;
+    //
+    // /* calcula o número de blocos que vão ser carregados pra memória */
+    // if(size <= CLUSTERSIZE)
+    //     qtd = 1;
+    // else if(size % CLUSTERSIZE != 0)
+    //     qtd = 1 + (size / CLUSTERSIZE);
+    // else
+    //     qtd = size / CLUSTERSIZE;
+    //
+    // printf("Antes do bl_read\n");
+    // printf("INICIO_DIR: %d\n", INICIO_DIR);
+    // printf("pos_dir: %d\n", pos_dir);
+    // printf("FILE: %d\n", file);
+    //
+    // /* carrega o primeiro bloco pra memória */
+    // if(!bl_read(INICIO_DIR + pos_dir*8, &buffer_interno[qtd_aux*SECTORSIZE]))
+    //     return -1;
+    //
+    // while(qtd_aux < qtd || size >= 0){
+    //     while(cont_interno < size && cont_interno < CLUSTERSIZE && size > 0){
+    //        buffer[cont] = buffer_interno[cont_interno];
+    //        cont++;
+    //        cont_interno++;
+    //        total++;
+    //     }
+    //         dir[pos_dir].size = total;printf("buffer_interno fs_read: %s\n", buffer_interno);
+    //     printf("buffer fs_read: %s\n", buffer);
+    //     if(cont_interno >= CLUSTERSIZE){
+    //     	aux = dir[pos_dir].first_block;
+    //       id_arq[pos_dir].first_block = fat[aux];
+    //   		prox = fat[aux];
+    //     }
+    //
+    // /* TODO: deveríamos DE NOVO fazer um aux*8 ou prox*8? */
+		// if(!bl_read(INICIO_DIR + prox*8, &buffer[prox*SECTORSIZE]))
+		//     return -1;
+    //
+		// qtd_aux++;
+		// cont_interno = 0;
+    // size -= CLUSTERSIZE;
+    // dir[pos_dir].size = total;
+    // }
+    // printf("Total de bytes lidos: %d\n", total);
+    // return total;
 }
