@@ -410,7 +410,12 @@ int fs_write(char *buffer, int size, int file) {
     pos_dir = id_arq[file].first_block;
     printf("pos dir = %d\n", pos_dir);
 
-
+    //o problema está aqui
+    //na segunda chamada com a cte. que vale 10 do shell.c sendo atribuida ao size, o cont_escrita está em 10
+    //então ele pula esse while e só copia as 10 primeiras posições
+    //acredito que esse erro também aconteça no fs_read, então não conseguiremos ler mais de 10 bytes do arquivo
+    //eu amo e odeio esse trabalho
+	
     while (id_arq[file].cont_escrita < size){
       id_arq[file].buffer_interno[id_arq[file].cont_escrita] = buffer[id_arq[file].cont_escrita];
 
