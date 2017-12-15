@@ -397,10 +397,12 @@ int fs_close(int file){
  */
 int fs_write(char *buffer, int size, int file) {
     printf("Entrou no write\n");
-    int total = 0, pos_dir, prox_bloco, change = 0, i, j, k = 0, pos_dir_size = 0, pos_fat = 0;
+    int total = 0, pos_dir, prox_bloco, change = 0, i, j, k = 0;
+    int cont_interno = 0, teste = 0;
     char *buffer_fat = (char*) fat;
     char *buffer_dir = (char*) dir;
 
+    teste = id_arq[file].cont_escrita;
     /* VERIFICAÇÃO DE MODO */
     if(id_arq[file].f_mode != FS_W){
         printf("Erro ao abrir o arquivo para escrita\n");
@@ -415,14 +417,21 @@ int fs_write(char *buffer, int size, int file) {
     //então ele pula esse while e só copia as 10 primeiras posições
     //acredito que esse erro também aconteça no fs_read, então não conseguiremos ler mais de 10 bytes do arquivo
     //eu amo e odeio esse trabalho
-	
-    while (id_arq[file].cont_escrita < size){
-      id_arq[file].buffer_interno[id_arq[file].cont_escrita] = buffer[id_arq[file].cont_escrita];
 
-      if (id_arq[file].cont_escrita >= CLUSTERSIZE) {
+    while (cont_interno < size){
+      printf("cont_escrita: %d\n", id_arq[file].cont_escrita);
+      printf("teste:        %d\n", teste);
+      printf("cont interno: %d\n", cont_interno);
+      printf("%c\n",   buffer[cont_interno]);
+      id_arq[file].buffer_interno[id_arq[file].cont_escrita] = buffer[cont_interno];
+
+      if (teste >= CLUSTERSIZE){
+        printf("entrou maoe\n");
+        teste = 0;
         change = 1;
-        id_arq[file].cont_escrita = 0;
-        size -= CLUSTERSIZE;
+        cont_interno++;
+        id_arq[file].cont_escrita++;
+
         if(!bl_write(pos_dir*8, id_arq[file].buffer_interno))
             return -1;
 
@@ -434,11 +443,15 @@ int fs_write(char *buffer, int size, int file) {
         fat[dir[pos_dir].first_block] = prox_bloco;
         fat[prox_bloco] = ULTIMO;
         pos_dir = prox_bloco;
+        id_arq[file].first_block = prox_bloco;
       } else {
+        cont_interno++;
         id_arq[file].cont_escrita++;
+        teste++;
       }
       total++;
     }
+    printf("cont_escrita no final: %d\n", id_arq[file].cont_escrita);
 
     if(change){
       // ESCREVE NO ARQUIVO IMAGEM A FAT E O DIRETORIO
@@ -448,23 +461,25 @@ int fs_write(char *buffer, int size, int file) {
 
     for (i = 0, j = INICIO_DIR; i < QTD_SETOR_DIR; i++)
       if(!bl_write(j + i, &buffer_dir[i*SECTORSIZE]))
-        return -1;
+      return -1;
 
+    change = 0;
     }
 
     // atribuindo fat
     for(k = 0; k < 128; k++){
         if(id_arq[file].first_block == dir[k].first_block){
-            dir[k].size = total;
+            printf("dir[k].size: %d\n", dir[k].size);
+            printf("total:      %d\n", total);
+            dir[k].size += total;
             break;
         }
     }
 
     for(i = 0, j = INICIO_DIR; i < QTD_SETOR_DIR; i++){
         if(!bl_write(j + i, &buffer_dir[i * SECTORSIZE]))
-            return 0;
+            return -1;
     }
-
 
     return total;
 }
@@ -508,6 +523,7 @@ int fs_read(char *buffer, int size, int file) {
       while(contaux > 0){
         prox_bloco = fat[pos_dir];
         pos_dir = prox_bloco;
+        id_arq[file].first_block = prox_bloco;
         contaux--;
       }
     }
