@@ -309,15 +309,13 @@ int fs_open(char *file_name, int mode) {
 	}
 
 	if(mode == FS_R){
-      //printf("Sera se entra no read\n");
-		    //Se entrar aqui, significa que o arquivo não existe e um erro deve ser gerado
+		  //Se entrar aqui, significa que o arquivo não existe e um erro deve ser gerado
   		if(!flag){
   			printf("Arquivo nao existe\n");
   			return -1;
       }
           // salva no vetor de identificadores arquivos abertos
         for(i = 0; i < 128; i++){
-          //FIZEMOS UMA ALTERCAO AQUI
             if(!id_arq[i].first_block){
                 id_arq[i].first_block = dir[pos_dir].first_block;
                 id_arq[i].f_mode = FS_R;
@@ -332,17 +330,14 @@ int fs_open(char *file_name, int mode) {
       //printf("Sera se entra no uaiti\n");
         // cria arquivo caso não exista
         if(!flag) {
-            //printf("arquivo não existe\n");
             fs_create(file_name);
         } else {
-            //printf("arquivo existe\n");
             fs_remove(file_name);
             fs_create(file_name);
         }
 
         for(i = 0; i < 128; i++){
             if(id_arq[i].first_block == DIR_LIVRE){
-              //printf("Alteramos aqui hehe\n");
                 id_arq[i].first_block = dir[pos_dir].first_block;
                 id_arq[i].f_mode = FS_W;
                 id_arq[i].cont_leitura = 0;
@@ -363,9 +358,6 @@ int fs_open(char *file_name, int mode) {
  * Caso contrário, tira o arquivo do vetor.
  */
 int fs_close(int file){
-/* TODO: PERGUNTAR:
-      - precisa reescrever fat e diretório quando fechar o arquivo?
-*/
     int pos_dir = 0, i = 0;
 
     if(file < 0 || file > 128){
@@ -390,7 +382,7 @@ int fs_close(int file){
     for (i = 0; i < CLUSTERSIZE; i++)
       id_arq[file].buffer_interno[i] = '\0';
 
-    return 0;
+    return 1;
 }
 
 /*
@@ -399,37 +391,29 @@ int fs_close(int file){
  *  A posição de escrita é sempre na última posição porque não tem seek.
  */
 int fs_write(char *buffer, int size, int file) {
-    //printf("Entrou no write\n");
     int total = 0, pos_dir, prox_bloco, change = 0, i, j, k = 0;
     int cont_interno = 0, cont_cluster = 0;
     char *buffer_fat = (char*) fat;
     char *buffer_dir = (char*) dir;
 
-    cont_cluster = id_arq[file].cont_escrita;
+    if(id_arq[file].first_block == DIR_LIVRE){
+        printf("Não existe o arquivo\n");
+        return -1;
+    }
+
     /* VERIFICAÇÃO DE MODO */
     if(id_arq[file].f_mode != FS_W){
         printf("Erro ao abrir o arquivo para escrita\n");
         return -1;
     }
 
+    cont_cluster = id_arq[file].cont_escrita;
     pos_dir = id_arq[file].first_block;
-    //printf("pos dir = %d\n", pos_dir);
-
-    //o problema está aqui
-    //na segunda chamada com a cte. que vale 10 do shell.c sendo atribuida ao size, o cont_escrita está em 10
-    //então ele pula esse while e só copia as 10 primeiras posições
-    //acredito que esse erro também aconteça no fs_read, então não conseguiremos ler mais de 10 bytes do arquivo
-    //eu amo e odeio esse trabalho
 
     while (cont_interno < size){
-      //printf("cont_escrita: %d\n", id_arq[file].cont_escrita);
-      //printf("cont_cluster:        %d\n", cont_cluster);
-      //printf("cont interno: %d\n", cont_interno);
-      //printf("%c\n",   buffer[cont_interno]);
       id_arq[file].buffer_interno[id_arq[file].cont_escrita] = buffer[cont_interno];
 
       if (cont_cluster >= CLUSTERSIZE){
-        //printf("entrou maoe\n");
         cont_cluster = 0;
         change = 1;
         cont_interno++;
@@ -443,6 +427,7 @@ int fs_write(char *buffer, int size, int file) {
             printf("Disco cheio!\n");
             return -1;
         }
+
         fat[dir[pos_dir].first_block] = prox_bloco;
         fat[prox_bloco] = ULTIMO;
         pos_dir = prox_bloco;
@@ -454,7 +439,6 @@ int fs_write(char *buffer, int size, int file) {
       }
       total++;
     }
-    //printf("cont_escrita no final: %d\n", id_arq[file].cont_escrita);
 
     if(change){
       // ESCREVE NO ARQUIVO IMAGEM A FAT E O DIRETORIO
@@ -472,8 +456,6 @@ int fs_write(char *buffer, int size, int file) {
     // atribuindo fat
     for(k = 0; k < 128; k++){
         if(id_arq[file].first_block == dir[k].first_block){
-            //printf("dir[k].size: %d\n", dir[k].size);
-            //printf("total:      %d\n", total);
             dir[k].size += total;
             break;
         }
@@ -511,7 +493,11 @@ int procura_fat(){
 int fs_read(char *buffer, int size, int file) {
     int pos_dir, total = 0, i;
     int prox_bloco = 0;
-    //printf("Entrou no read\n");
+
+    if(id_arq[file].first_block == DIR_LIVRE){
+        printf("Não existe o arquivo\n");
+        return -1;
+    }
 
     /* VERIFICAÇÃO DE MODO DO ARQUIVO */
     if(id_arq[file].f_mode != FS_R){
@@ -524,15 +510,12 @@ int fs_read(char *buffer, int size, int file) {
     int contaux = id_arq[file].cont_blread;
 
     if(id_arq[file].cont_blread != 0){
-      //printf("\n \n \n entrou \n \n \n");
       while(contaux > 0){
         prox_bloco = fat[pos_dir];
         pos_dir = prox_bloco;
-      //  id_arq[file].first_block = prox_bloco;
         contaux--;
       }
     }
-    //printf("pos dir = %d\n", pos_dir);
 
     if(id_arq[file].carrega == 1){
       if(!bl_read(pos_dir*8, id_arq[file].buffer_interno))
@@ -556,53 +539,4 @@ int fs_read(char *buffer, int size, int file) {
     id_arq[file].cont_leitura+=i;
 
     return total;
-
-
-    // /* TODO: verificar se o pos_dir tem que ser o first_block*8 ou não*/
-    // pos_dir = id_arq[file].first_block;
-    // total += cont_interno;
-    //
-    // /* calcula o número de blocos que vão ser carregados pra memória */
-    // if(size <= CLUSTERSIZE)
-    //     qtd = 1;
-    // else if(size % CLUSTERSIZE != 0)
-    //     qtd = 1 + (size / CLUSTERSIZE);
-    // else
-    //     qtd = size / CLUSTERSIZE;
-    //
-    // printf("Antes do bl_read\n");
-    // printf("INICIO_DIR: %d\n", INICIO_DIR);
-    // printf("pos_dir: %d\n", pos_dir);
-    // printf("FILE: %d\n", file);
-    //
-    // /* carrega o primeiro bloco pra memória */
-    // if(!bl_read(INICIO_DIR + pos_dir*8, &buffer_interno[qtd_aux*SECTORSIZE]))
-    //     return -1;
-    //
-    // while(qtd_aux < qtd || size >= 0){
-    //     while(cont_interno < size && cont_interno < CLUSTERSIZE && size > 0){
-    //        buffer[cont] = buffer_interno[cont_interno];
-    //        cont++;
-    //        cont_interno++;
-    //        total++;
-    //     }
-    //         dir[pos_dir].size = total;printf("buffer_interno fs_read: %s\n", buffer_interno);
-    //     printf("buffer fs_read: %s\n", buffer);
-    //     if(cont_interno >= CLUSTERSIZE){
-    //     	aux = dir[pos_dir].first_block;
-    //       id_arq[pos_dir].first_block = fat[aux];
-    //   		prox = fat[aux];
-    //     }
-    //
-    // /* TODO: deveríamos DE NOVO fazer um aux*8 ou prox*8? */
-		// if(!bl_read(INICIO_DIR + prox*8, &buffer[prox*SECTORSIZE]))
-		//     return -1;
-    //
-		// qtd_aux++;
-		// cont_interno = 0;
-    // size -= CLUSTERSIZE;
-    // dir[pos_dir].size = total;
-    // }
-    // printf("Total de bytes lidos: %d\n", total);
-    // return total;
 }
